@@ -21,7 +21,10 @@ spa.shell = (function() {
             },
             main_html: String() 
             + '<div class="spa-shell-head">'
-             + '<div class="spa-shell-head-logo"></div>'
+             + '<div class="spa-shell-head-logo">'
+				+ '<h1>SPA</h1>'
+				+ '<p>javascript end to end</p>'
+			+ '</div>'
                + '<div class="spa-shell-head-acct"></div>'
                + '<div class="spa-shell-head-search"></div>'
             +'</div>'
@@ -40,7 +43,7 @@ spa.shell = (function() {
             chat_retract_height: 15,
             chat_extended_title: 'Click to retract',
             chat_retracted_title: 'Click to extend',
-            resize_interval: 200, /* 200-millisec interval to consider resize event */
+            resize_interval: 200 /* 200-millisec interval to consider resize event */
         },
         stateMap = {
             $container: undefined,
@@ -49,6 +52,7 @@ spa.shell = (function() {
         },
         jqueryMap = {},
         copyAnchorMap, changeAnchorPart, onHashchange, onResize,
+		onTapAcct, onLogin, onLogout,
         setChatAnchor, setJqueryMap, onClickChat, initModule;
         
     //------------------ END MODULE SCOPE VARIABLES ----------
@@ -65,8 +69,12 @@ spa.shell = (function() {
     // Begin DOM method /setJqueryMap/
     setJqueryMap = function(){
         var $container = stateMap.$container;
-        jqueryMap = { $container: $container };
-    };
+        jqueryMap = { 
+			$container: $container,
+			$acct : $container.find('.spa-shell-head-acct'),
+			$nav : $container.find('.spa-shell-main-nav') 
+		};
+	};
     // End DOM method /setJqueryMap/
     
     
@@ -155,22 +163,22 @@ spa.shell = (function() {
         anchor_map_previous = copyAnchorMap();
         
         // attempt to parse anchor
-        try { anchor_map_propsed = $.uriAnchor.makeAnchorMap(); }
+        try { anchor_map_proposed = $.uriAnchor.makeAnchorMap(); }
         catch(error) {
             $.uriAnchor.setAnchor(anchor_map_previous, null, true);
             return false;
         }
-        stateMap.anchor_map = anchor_map_propsed;
+        stateMap.anchor_map = anchor_map_proposed;
         
         // convenience vars
         _s_chat_previous = anchor_map_previous._s_chat;
-        _s_chat_propsed = anchor_map_propsed._s_chat;
+        _s_chat_proposed = anchor_map_proposed._s_chat;
         
         // Begin adjust chat component if changed
         if (!anchor_map_previous 
-            || _s_chat_previous !== _s_chat_propsed) 
+            || _s_chat_previous !== _s_chat_proposed) 
         {
-            s_chat_proposed = anchor_map_propsed.chat;
+            s_chat_proposed = anchor_map_proposed.chat;
             switch (s_chat_proposed) {
                 case 'opened':
                     is_ok = spa.chat.setSliderPosition('opened'); 
@@ -180,8 +188,8 @@ spa.shell = (function() {
                 break;
                 default:
                     spa.chat.setSliderPosition('closed');
-                    delete anchor_map_propsed.chat;
-                    $.uriAnchor.setAnchor(anchor_map_propsed, null, true);
+                    delete anchor_map_proposed.chat;
+                    $.uriAnchor.setAnchor(anchor_map_proposed, null, true);
             }
         }
         // end adjust chat component if changed
@@ -224,6 +232,33 @@ spa.shell = (function() {
         return false;
     };
     // End Eent handler /onClickChat/
+	
+	// Begin Event handler /onTapAcct/
+	onTapAcct = function ( event ) {
+		var acct_text, user_name, user = spa.model.people.get_user();
+		if ( user.get_is_anon() ) {
+			user_name = prompt( 'Please sign-in' );
+			spa.model.people.login( user_name );
+			jqueryMap.$acct.text( '... processing ...' );
+		}
+		else {
+			spa.model.people.logout();
+		}
+		return false;
+	};
+	//Event handler /onTapAcct/
+	
+	// Begin Event handler /onLogin/
+	onLogin = function ( event, login_user ) {
+		jqueryMap.$acct.text( login_user.name );
+	};
+	// End Event handler /onLogin/
+	
+	// Begin Event handler /onLogout/
+	onLogout = function ( event, logout_user ) {
+		jqueryMap.$acct.text( 'Please sign-in' );
+	};
+	//End Event handler /onLogout/
     //------------------- END EVENT HANDLERS -----------------
     
     
@@ -294,12 +329,19 @@ spa.shell = (function() {
         .bind('resize', onResize)
         .bind('hashchange', onHashchange)
         .trigger('hashchange');
+				
+		$.gevent.subscribe( $container, 'spa-login', onLogin );
+		$.gevent.subscribe( $container, 'spa-logout', onLogout );
+		
+		jqueryMap.$acct
+			.text( 'Please sign-in')
+			.bind( 'utap', onTapAcct ); 
     };
     // End public method /initModule/
     
     // test toggle
-    setTimeout( function () { toggleChat( true ); }, 3000 );
-    setTimeout( function () { toggleChat( false ); }, 8000 );
+    //setTimeout( function () { toggleChat( true ); }, 3000 );
+    //setTimeout( function () { toggleChat( false ); }, 8000 );
     
     // end public method /initModule/
     
